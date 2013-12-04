@@ -1,5 +1,5 @@
+{-# LANGUAGE OverloadedStrings   #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE OverloadedStrings #-}
 
 -- | Haskell bindings to the REST servire provided by elasticsearch.
 module Search.ElasticSearch
@@ -21,26 +21,28 @@ module Search.ElasticSearch
        , search
        ) where
 
-import Control.Applicative
-import Data.List                  (intercalate)
-import Data.Maybe                 (fromJust)
+import           Control.Applicative
+import           Data.List                  (intercalate)
+import           Data.Maybe                 (fromJust)
 
-import qualified Data.ByteString.Lazy as BS
+import qualified Data.ByteString.Lazy       as BS
 import qualified Data.ByteString.Lazy.Char8 as Char8
-import qualified Data.Text as T
+import qualified Data.Text                  as T
 
-import Data.Attoparsec.Lazy       (parse, Result(..))
-import Data.Aeson                 (FromJSON, ToJSON, encode, json, parseJSON
-                                  ,Value(..), (.:))
-import Data.Aeson.Types           (parseEither, typeMismatch)
-import Data.Text                  (Text)
-import Network.BufferType         (buf_fromStr, buf_empty, bufferOps, BufferType
-                                  ,BufferOp)
-import Network.HTTP               (Request(..), RequestMethod(..), simpleHTTP
-                                  ,Header(..), HeaderName(..), Response(..))
-import Network.URI                (URI(..), parseRelativeReference, relativeTo
-                                  ,parseURI, isUnescapedInURI, escapeURIString
-                                  ,isUnreserved)
+import           Data.Aeson                 (FromJSON, ToJSON, Value (..),
+                                             encode, json, parseJSON, (.:))
+import           Data.Aeson.Types           (parseEither, typeMismatch)
+import           Data.Attoparsec.Lazy       (Result (..), parse)
+import           Data.Text                  (Text)
+import           Network.BufferType         (BufferOp, BufferType, buf_empty,
+                                             buf_fromStr, bufferOps)
+import           Network.HTTP               (Header (..), HeaderName (..),
+                                             Request (..), RequestMethod (..),
+                                             Response (..), simpleHTTP)
+import           Network.URI                (URI (..), escapeURIString,
+                                             isUnescapedInURI, isUnreserved,
+                                             parseRelativeReference, parseURI,
+                                             relativeTo)
 
 --------------------------------------------------------------------------------
 -- | A type of document, with a phantom type back to the document itself.
@@ -50,7 +52,7 @@ newtype DocumentType a = DocumentType { unDocumentType :: String }
 -- | A connection an elasticsearch server.
 data ElasticSearch = ElasticSearch
     { -- | The URI to @/@ of this instance.
-      esEndPoint :: URI
+      esEndPoint  :: URI
 
       -- | The user agent to make requests with.
     , esUserAgent :: String
@@ -96,12 +98,12 @@ indexDocument es index document =
 --------------------------------------------------------------------------------
 -- | Run a given search query.
 data SearchResults d = SearchResults { getResults :: [SearchResult d]
-                                     , totalHits :: Integer
-                                     }
+                                     , totalHits  :: Integer
+                                     } deriving Show
 
-data SearchResult d = SearchResult { score :: Double
+data SearchResult d = SearchResult { score  :: Double
                                    , result :: d
-                                   }
+                                   } deriving Show
 
 instance (FromJSON d) => FromJSON (SearchResults d) where
   parseJSON (Object v) = SearchResults <$> results <*> hits
@@ -160,11 +162,8 @@ documentIndexPath doc index =
 
 dispatchRequest :: ElasticSearch -> RequestMethod -> URI -> Maybe BS.ByteString
                 -> IO BS.ByteString
-dispatchRequest es method apiCall body =
-  case uri' of
-    Nothing -> error "Could not formulate correct API call URI"
-    Just uri -> do
-      resp' <- simpleHTTP (req uri)
+dispatchRequest es method apiCall body = do
+      resp' <- simpleHTTP (req uri')
       case resp' of
         Left e -> error ("Failed to dispatch request: " ++ show e)
         Right resp -> case rspCode resp of
